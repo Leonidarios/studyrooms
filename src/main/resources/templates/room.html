@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html
+    xmlns:th="https://www.thymeleaf.org"
+    xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+    xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+    layout:decorate="~{base}">
+
+<head>
+    <title>Study room</title>
+</head>
+
+<body>
+
+<header layout:fragment="header">
+    <p><a th:href="@{/rooms}">Back to list</a></p>
+    <h1 th:text="${room.name()}">Room</h1>
+</header>
+
+<section layout:fragment="main">
+
+    <p class="text-success" th:if="${message != null}" th:text="${message}"></p>
+    <p class="text-danger" th:if="${errorMessage != null}" th:text="${errorMessage}"></p>
+
+    <ul class="mb-4">
+        <li>Location: <b th:text="${room.location()}"></b></li>
+        <li>Capacity: <b th:text="${room.capacity()}"></b></li>
+        <li>Opening hours: <b th:text="${room.openingTime()} + ' - ' + ${room.closingTime()}"></b></li>
+        <li>Status: <b th:text="${room.open()} ? 'Open' : 'Closed'"></b></li>
+    </ul>
+
+    <!-- DATE -->
+    <form th:action="@{|/rooms/${room.id()}|}" method="get" class="mb-3">
+        <label class="form-label" for="date">Availability for date</label>
+        <div class="d-flex gap-2">
+            <input type="date" id="date" name="date" class="form-control" th:value="${date}" />
+            <button type="submit" class="btn btn-secondary">Show</button>
+        </div>
+    </form>
+
+    <table class="table mb-4">
+        <thead>
+        <tr>
+            <th>Time</th>
+            <th>Booked</th>
+            <th>Free seats</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="s : ${slots}" th:classappend="${s.full()} ? 'table-danger' : ''">
+            <td th:text="${s.start()} + ' - ' + ${s.end()}"></td>
+            <td th:text="${s.booked()} + ' / ' + ${s.capacity()}"></td>
+            <td th:text="${s.free()}"></td>
+        </tr>
+        </tbody>
+    </table>
+
+    <!-- Student actions -->
+    <div sec:authorize="hasRole('STUDENT')" th:if="${room.open()}" class="mb-4">
+        <a class="btn btn-primary" th:href="@{/reservations/new(roomId=${room.id()}, date=${date})}">Book this room</a>
+    </div>
+
+    <!-- Staff actions -->
+    <div sec:authorize="hasRole('STAFF')">
+        <hr>
+        <p><a th:href="@{|/rooms/${room.id()}/edit|}">Edit room</a></p>
+
+        <form th:if="${room.open()}" th:action="@{|/rooms/${room.id()}/close|}" method="post">
+            <label class="form-label" for="reason">Close room (cancels all future reservations)</label>
+            <input type="text" id="reason" name="reason" class="form-control mb-2" placeholder="Reason, e.g. maintenance" />
+            <button type="submit" class="btn btn-danger">Close room</button>
+        </form>
+
+        <form th:unless="${room.open()}" th:action="@{|/rooms/${room.id()}/reopen|}" method="post">
+            <button type="submit" class="btn btn-primary">Reopen room</button>
+        </form>
+    </div>
+
+</section>
+
+</body>
+</html>

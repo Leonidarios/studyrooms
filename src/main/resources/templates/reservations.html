@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html
+    xmlns:th="https://www.thymeleaf.org"
+    xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+    xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+    layout:decorate="~{base}">
+
+<head>
+    <title>Reservations</title>
+</head>
+
+<body>
+
+<header layout:fragment="header">
+    <h1 sec:authorize="hasRole('STUDENT')">My reservations</h1>
+    <h1 sec:authorize="hasRole('STAFF')">All reservations</h1>
+</header>
+
+<section layout:fragment="main">
+
+    <p class="text-success" th:if="${message != null}" th:text="${message}"></p>
+    <p class="text-danger" th:if="${errorMessage != null}" th:text="${errorMessage}"></p>
+
+    <form sec:authorize="hasRole('STAFF')" th:action="@{/reservations}" method="get" class="mb-3">
+        <label class="form-label" for="date">Filter by date</label>
+        <div class="d-flex gap-2">
+            <input type="date" id="date" name="date" class="form-control" th:value="${date}" />
+            <button type="submit" class="btn btn-secondary">Filter</button>
+            <a class="btn btn-link" th:href="@{/reservations}">All</a>
+        </div>
+    </form>
+
+    <div sec:authorize="hasRole('STUDENT')" class="mb-3">
+        <a th:href="@{/reservations/new}">Make a new reservation</a>
+    </div>
+
+    <table class="table mb-4">
+        <thead>
+        <tr>
+            <th style="width: 3em">#</th>
+            <th>Room</th>
+            <th>Date</th>
+            <th>Time</th>
+            <th sec:authorize="hasRole('STAFF')">Student</th>
+            <th>Status</th>
+            <th>Action</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="r : ${reservations}">
+            <td th:text="${r.id()}"></td>
+            <td th:text="${r.room().name()}"></td>
+            <td th:text="${r.date()}"></td>
+            <td th:text="${r.startTime()} + ' - ' + ${r.endTime()}"></td>
+            <td sec:authorize="hasRole('STAFF')" th:text="${r.student().huaId()}"></td>
+            <td th:text="${r.status()}" th:title="${r.cancelReason()}"></td>
+            <td>
+                <form th:if="${r.status().name() == 'ACTIVE'}" th:action="@{|/reservations/${r.id()}/cancel|}" method="post">
+                    <button type="submit" class="btn btn-sm btn-outline-danger">Cancel</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+
+    <p th:if="${reservations.isEmpty()}">No reservations.</p>
+
+</section>
+
+</body>
+</html>

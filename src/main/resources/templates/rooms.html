@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html
+    xmlns:th="https://www.thymeleaf.org"
+    xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+    xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+    layout:decorate="~{base}">
+
+<head>
+    <title>Study rooms</title>
+</head>
+
+<body>
+
+<header layout:fragment="header">
+    <h1>Study rooms</h1>
+</header>
+
+<section layout:fragment="main">
+
+    <table class="table mb-4">
+        <thead>
+        <tr>
+            <th>Name</th>
+            <th>Location</th>
+            <th>Capacity</th>
+            <th>Hours</th>
+            <th>Status</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="r : ${rooms}">
+            <td><a th:href="@{|/rooms/${r.id()}|}" th:text="${r.name()}"></a></td>
+            <td th:text="${r.location()}"></td>
+            <td th:text="${r.capacity()}"></td>
+            <td th:text="${r.openingTime()} + ' - ' + ${r.closingTime()}"></td>
+            <td th:text="${r.open()} ? 'Open' : 'Closed'"></td>
+        </tr>
+        </tbody>
+    </table>
+
+    <div sec:authorize="hasRole('STAFF')">
+        <a th:href="@{/rooms/new}">Add new room</a>
+    </div>
+
+</section>
+
+</body>
+</html>

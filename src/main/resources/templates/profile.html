@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html
+    xmlns:th="https://www.thymeleaf.org"
+    xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+    layout:decorate="~{base}">
+
+<head>
+    <title>Profile</title>
+</head>
+
+<body>
+
+<header layout:fragment="header">
+    <h1>StudyRooms <small>/ Profile</small></h1>
+</header>
+
+<section layout:fragment="main">
+
+    <p th:text="'Logged in as: ' + ${me.emailAddress()} + ' (' + ${me.type()} + ')'"></p>
+
+    <hr>
+
+    <!-- STUDENT -->
+    <ul th:if="${me.type().name() == 'STUDENT'}">
+        <li><a th:href="@{/rooms}">Browse study rooms &amp; availability</a></li>
+        <li><a th:href="@{/reservations/new}">Make a reservation</a></li>
+        <li><a th:href="@{/reservations}">My reservations</a></li>
+    </ul>
+
+    <!-- STAFF -->
+    <ul th:if="${me.type().name() == 'STAFF'}">
+        <li><a th:href="@{/rooms}">Manage study rooms</a></li>
+        <li><a th:href="@{/rooms/new}">Add a new study room</a></li>
+        <li><a th:href="@{/reservations}">All reservations</a></li>
+    </ul>
+
+</section>
+
+</body>
+</html>

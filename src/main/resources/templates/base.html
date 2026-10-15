@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html
+    xmlns:th="https://www.thymeleaf.org"
+    xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+    xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+    lang="en"
+    dir="ltr">
+<head>
+    <meta charset="UTF-8" />
+    <title layout:title-pattern="$CONTENT_TITLE - StudyRooms - Harokopio University of Athens">HUA</title>
+
+    <!-- BOOTSTRAP -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+
+    <!-- CUSTOM STYLES -->
+    <style>
+        .app-container {
+            margin: 0 auto;
+            max-width: 800px;
+            box-shadow: 12px 12px 0px black;
+            border: 4px solid black !important;
+        }
+        .form-control, .form-select {
+            border: 2px solid #6d6d6d;
+            border-radius: 0;
+        }
+        .form-label {
+            text-transform: uppercase;
+            margin-bottom: 2px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            color: #7c7c7c;
+            font-size: 12px;
+        }
+        .app-container .btn-primary {
+            background: black;
+            border: 0;
+            padding: 0.5em 4em;
+        }
+        .app-container .table {
+            table-layout: fixed;
+            width: 100%;
+        }
+        .app-container .table td,
+        .app-container .table th {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    </style>
+</head>
+<body>
+
+<header class="text-center p-4" layout:fragment="header"></header>
+
+<!-- NAVIGATION -->
+<nav class="text-center mb-4">
+    <a th:href="@{/rooms}">Study rooms</a>
+    <span sec:authorize="isAuthenticated()">
+        | <a th:href="@{/reservations}">Reservations</a>
+        | <a th:href="@{/profile}">Profile</a>
+        | <a th:href="@{/logout}">Logout</a>
+        <br><small class="text-muted" sec:authentication="name"></small>
+    </span>
+    <span sec:authorize="!isAuthenticated()">
+        | <a th:href="@{/login}">Log in</a>
+        | <a th:href="@{/register}">Register</a>
+    </span>
+</nav>
+
+<main class="app-container p-4" layout:fragment="main"></main>
+
+<footer class="text-center p-4 mt-4" layout:fragment="footer">
+    <small>&copy; 2026 Harokopio University of Athens</small>
+</footer>
+</body>
+</html>

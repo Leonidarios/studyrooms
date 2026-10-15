@@ -1,0 +1,209 @@
+package gr.hua.dit.studyrooms.core.service.impl;
+
+import gr.hua.dit.studyrooms.core.model.Person;
+import gr.hua.dit.studyrooms.core.model.PersonType;
+import gr.hua.dit.studyrooms.core.exception.ExternalServiceException;
+import gr.hua.dit.studyrooms.core.port.LookupPort;
+import gr.hua.dit.studyrooms.core.port.PhoneNumberPort;
+import gr.hua.dit.studyrooms.core.port.SmsNotificationPort;
+import gr.hua.dit.studyrooms.core.port.impl.dto.PhoneNumberValidationResult;
+import gr.hua.dit.studyrooms.core.repository.PersonRepository;
+import gr.hua.dit.studyrooms.core.service.PersonBusinessLogicService;
+import gr.hua.dit.studyrooms.core.service.mapper.PersonMapper;
+import gr.hua.dit.studyrooms.core.service.model.CreatePersonRequest;
+import gr.hua.dit.studyrooms.core.service.model.CreatePersonResult;
+import gr.hua.dit.studyrooms.core.service.model.PersonView;
+
+import jakarta.transaction.Transactional;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+import java.util.Set;
+
+/**
+ * Default implementation of {@link PersonBusinessLogicService}.
+ */
+@Service
+public class PersonBusinessLogicServiceImpl implements PersonBusinessLogicService {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(PersonBusinessLogicServiceImpl.class);
+
+    private final Validator validator;
+    private final PasswordEncoder passwordEncoder;
+    private final PersonRepository personRepository;
+    private final PersonMapper personMapper;
+    private final PhoneNumberPort phoneNumberPort;
+    private final LookupPort lookupPort;
+    private final SmsNotificationPort smsNotificationPort;
+
+    public PersonBusinessLogicServiceImpl(final Validator validator,
+                                          final PasswordEncoder passwordEncoder,
+                                          final PersonRepository personRepository,
+                                          final PersonMapper personMapper,
+                                          final PhoneNumberPort phoneNumberPort,
+                                          final LookupPort lookupPort,
+                                          final SmsNotificationPort smsNotificationPort) {
+        if (validator == null) throw new NullPointerException();
+        if (passwordEncoder == null) throw new NullPointerException();
+        if (personRepository == null) throw new NullPointerException();
+        if (personMapper == null) throw new NullPointerException();
+        if (phoneNumberPort == null) throw new NullPointerException();
+        if (lookupPort == null) throw new NullPointerException();
+        if (smsNotificationPort == null) throw new NullPointerException();
+
+        this.validator = validator;
+        this.passwordEncoder = passwordEncoder;
+        this.personRepository = personRepository;
+        this.personMapper = personMapper;
+        this.phoneNumberPort = phoneNumberPort;
+        this.lookupPort = lookupPort;
+        this.smsNotificationPort = smsNotificationPort;
+    }
+
+    @Transactional
+    @Override
+    public CreatePersonResult createPerson(final CreatePersonRequest createPersonRequest, final boolean notify) {
+        if (createPersonRequest == null) throw new NullPointerException();
+
+        // `CreatePersonRequest` validation.
+        // --------------------------------------------------
+
+        final Set<ConstraintViolation<CreatePersonRequest>> requestViolations
+            = this.validator.validate(createPersonRequest);
+        if (!requestViolations.isEmpty()) {
+            final StringBuilder sb = new StringBuilder();
+            for (final ConstraintViolation<CreatePersonRequest> violation : requestViolations) {
+                sb
+                    .append(violation.getPropertyPath())
+                    .append(": ")
+                    .append(violation.getMessage())
+                    .append("\n");
+            }
+            return CreatePersonResult.fail(sb.toString());
+        }
+
+        // Unpack (we assume valid `CreatePersonRequest` instance)
+        // --------------------------------------------------
+
+        final PersonType type = createPersonRequest.type();
+        final String huaId = createPersonRequest.huaId().strip(); // remove whitespaces
+        final String firstName = createPersonRequest.firstName().strip();
+        final String lastName = createPersonRequest.lastName().strip();
+        final String emailAddress = createPersonRequest.emailAddress().strip();
+        String mobilePhoneNumber = createPersonRequest.mobilePhoneNumber().strip();
+        final String rawPassword = createPersonRequest.rawPassword();
+
+        // Basic email address validation.
+        // --------------------------------------------------
+
+        if (!emailAddress.endsWith("@hua.gr")) {
+            return CreatePersonResult.fail("Only academic email addresses (@hua.gr) are allowed");
+        }
+
+        // Advanced mobile phone number validation.
+        // --------------------------------------------------
+
+        if (type != PersonType.STUDENT && type != PersonType.STAFF) {
+            return CreatePersonResult.fail("Only students and library staff can register");
+        }
+
+        final PhoneNumberValidationResult phoneNumberValidationResult;
+        try {
+            phoneNumberValidationResult = this.phoneNumberPort.validate(mobilePhoneNumber);
+        } catch (ExternalServiceException e) {
+            return CreatePersonResult.fail(e.getMessage());
+        }
+        if (!phoneNumberValidationResult.isValidMobile()) {
+            return CreatePersonResult.fail("Mobile Phone Number is not valid");
+        }
+        mobilePhoneNumber = phoneNumberValidationResult.e164();
+
+        // --------------------------------------------------
+
+        if (this.personRepository.existsByHuaIdIgnoreCase(huaId)) {
+            return CreatePersonResult.fail("HUA ID already registered");
+        }
+
+        if (this.personRepository.existsByEmailAddressIgnoreCase(emailAddress)) {
+            return CreatePersonResult.fail("Email Address already registered");
+        }
+
+        if (this.personRepository.existsByMobilePhoneNumber(mobilePhoneNumber)) {
+            return CreatePersonResult.fail("Mobile Phone Number already registered");
+        }
+
+        // --------------------------------------------------
+
+        final PersonType personType_lookup;
+        try {
+            personType_lookup = this.lookupPort.lookup(huaId).orElse(null);
+        } catch (ExternalServiceException e) {
+            return CreatePersonResult.fail(e.getMessage());
+        }
+        if (personType_lookup == null) {
+            return CreatePersonResult.fail("Invalid HUA ID");
+        }
+        if (personType_lookup != type) {
+            return CreatePersonResult.fail("The provided person type does not match the actual one");
+        }
+
+        // --------------------------------------------------
+
+        final String hashedPassword = this.passwordEncoder.encode(rawPassword);
+
+        // Instantiate person.
+        // --------------------------------------------------
+
+        Person person = new Person();
+        person.setId(null); // auto generated
+        person.setHuaId(huaId);
+        person.setType(type);
+        person.setFirstName(firstName);
+        person.setLastName(lastName);
+        person.setEmailAddress(emailAddress);
+        person.setMobilePhoneNumber(mobilePhoneNumber);
+        person.setPasswordHash(hashedPassword);
+        person.setCreatedAt(null); // auto generated.
+
+        // --------------------------------------------------
+
+        final Set<ConstraintViolation<Person>> personViolations = this.validator.validate(person);
+        if (!personViolations.isEmpty()) {
+            // Throw an exception instead of returning an instance, i.e. `CreatePersonResult.fail`.
+            // At this point, errors/violations on the `Person` instance
+            // indicate a programmer error, not a client error.
+            throw new RuntimeException("invalid Person instance");
+        }
+
+        // Persist person (save/insert to database)
+        // --------------------------------------------------
+
+        person = this.personRepository.save(person);
+
+        // --------------------------------------------------
+
+        if (notify) {
+            final String content = String.format(
+                "You have successfully registered for StudyRooms. " +
+                    "Use your email (%s) to log in.", emailAddress);
+            final boolean sent = this.smsNotificationPort.sendSms(mobilePhoneNumber, content);
+            if (!sent) {
+                LOGGER.warn("SMS send to {} failed!", mobilePhoneNumber);
+            }
+        }
+
+        // Map `Person` to `PersonView`.
+        // --------------------------------------------------
+
+        final PersonView personView = this.personMapper.convertPersonToPersonView(person);
+
+        // --------------------------------------------------
+
+        return CreatePersonResult.success(personView);
+    }
+}

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html
+    xmlns:th="https://www.thymeleaf.org"
+    xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+    layout:decorate="~{base}">
+
+<head>
+    <title>Study room</title>
+</head>
+
+<body>
+
+<header layout:fragment="header">
+    <p><a th:href="@{/rooms}">Back to list</a></p>
+    <h1 th:text="${isEdit} ? 'Edit study room' : 'New study room'">Study room</h1>
+</header>
+
+<section layout:fragment="main">
+
+    <p class="text-danger" th:if="${errorMessage != null}" th:text="${errorMessage}"></p>
+
+    <form th:action="${isEdit} ? @{|/rooms/${roomId}/edit|} : @{/rooms/new}" method="post" th:object="${form}">
+
+        <div class="mb-3">
+            <label for="name" class="form-label">Name</label>
+            <input type="text" id="name" th:field="*{name}" class="form-control" required />
+            <div class="text-danger small mt-1" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></div>
+        </div>
+
+        <div class="mb-3">
+            <label for="location" class="form-label">Location</label>
+            <input type="text" id="location" th:field="*{location}" class="form-control" />
+            <div class="text-danger small mt-1" th:if="${#fields.hasErrors('location')}" th:errors="*{location}"></div>
+        </div>
+
+        <div class="mb-3">
+            <label for="capacity" class="form-label">Capacity (seats)</label>
+            <input type="number" id="capacity" th:field="*{capacity}" class="form-control" min="1" max="100" required />
+            <div class="text-danger small mt-1" th:if="${#fields.hasErrors('capacity')}" th:errors="*{capacity}"></div>
+        </div>
+
+        <div class="mb-3">
+            <label for="openingTime" class="form-label">Opens at</label>
+            <input type="time" id="openingTime" th:field="*{openingTime}" class="form-control" required />
+            <div class="text-danger small mt-1" th:if="${#fields.hasErrors('openingTime')}" th:errors="*{openingTime}"></div>
+        </div>
+
+        <div class="mb-3">
+            <label for="closingTime" class="form-label">Closes at</label>
+            <input type="time" id="closingTime" th:field="*{closingTime}" class="form-control" required />
+            <div class="text-danger small mt-1" th:if="${#fields.hasErrors('closingTime')}" th:errors="*{closingTime}"></div>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Save</button>
+    </form>
+
+</section>
+
+</body>
+</html>

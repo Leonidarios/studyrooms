@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html
+    xmlns:th="https://www.thymeleaf.org"
+    xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+    layout:decorate="~{base}">
+
+<head>
+    <title>New reservation</title>
+</head>
+
+<body>
+
+<header layout:fragment="header">
+    <p><a th:href="@{/reservations}">Back to my reservations</a></p>
+    <h1>New reservation</h1>
+</header>
+
+<section layout:fragment="main">
+
+    <p class="text-danger" th:if="${errorMessage != null}" th:text="${errorMessage}"></p>
+
+    <form th:action="@{/reservations/new}" method="post" th:object="${form}">
+
+        <div class="mb-3">
+            <label for="roomId" class="form-label">Room</label>
+            <select id="roomId" th:field="*{roomId}" class="form-select" required>
+                <option value="">-- choose a room --</option>
+                <option th:each="r : ${rooms}"
+                        th:value="${r.id()}"
+                        th:text="${r.name()} + ' (' + ${r.openingTime()} + '-' + ${r.closingTime()} + ', ' + ${r.capacity()} + ' seats)'"></option>
+            </select>
+            <div class="text-danger small mt-1" th:if="${#fields.hasErrors('roomId')}" th:errors="*{roomId}"></div>
+        </div>
+
+        <div class="mb-3">
+            <label for="date" class="form-label">Date</label>
+            <input type="date" id="date" th:field="*{date}" class="form-control" required />
+            <div class="text-danger small mt-1" th:if="${#fields.hasErrors('date')}" th:errors="*{date}"></div>
+        </div>
+
+        <div class="mb-3">
+            <label for="startTime" class="form-label">From</label>
+            <input type="time" id="startTime" th:field="*{startTime}" class="form-control" required />
+            <div class="text-danger small mt-1" th:if="${#fields.hasErrors('startTime')}" th:errors="*{startTime}"></div>
+        </div>
+
+        <div class="mb-3">
+            <label for="endTime" class="form-label">To</label>
+            <input type="time" id="endTime" th:field="*{endTime}" class="form-control" required />
+            <div class="text-danger small mt-1" th:if="${#fields.hasErrors('endTime')}" th:errors="*{endTime}"></div>
+        </div>
+
+        <p class="small text-muted">Rules: max 2 reservations per day, max 3 hours each, up to 14 days ahead, within the room's opening hours.</p>
+
+        <button type="submit" class="btn btn-primary">Book</button>
+    </form>
+
+</section>
+
+</body>
+</html>
